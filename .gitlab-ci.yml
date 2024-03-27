@@ -1,0 +1,44 @@
+stages:
+  - build
+  - package
+  - deploy
+
+variables:
+  DOCKER_HOST: tcp://docker:2375/
+
+build:
+  image: gradle:jdk17
+  stage: build
+  script:
+    - ./gradlew clean
+    - ./gradlew build
+  artifacts:
+    paths:
+      - build/libs/*.jar
+
+package:
+  image: docker:stable
+  stage: package
+  dependencies:
+    - build
+  script:
+    - export TAG_ID=$CI_PIPELINE_IID
+    - docker login -u ID -p PASSWORD DOCKER_REGISTRY_URL
+    - docker image build -t DOCKER_REGISTRY_URL/spring-petclinic-data-jdbc:$TAG_ID .
+    - docker push DOCKER_REGISTRY_URL/spring-petclinic-data-jdbc:$TAG_ID
+
+deploy:
+  image: alpine/helm:3.5.3
+  stage: deploy
+  script:
+    - git clone helm-chart_repository_url
+    - cd helm-chart
+    - sed -i "s|imageTag:.*|imageTag: $TAG_ID|g" values.yaml
+    - argocd login --insecure --username argocd_username --password argocd_password argocd_url
+    - git config --global user.email "email@email.com"
+    - git config --global user.name "username"
+    - git pull
+    - git add helm-chart/values.yaml
+    - git commit -m "${TAG_ID}"
+    - git push origin
+    - argocd app sync spring-petclinic-data-jdbc

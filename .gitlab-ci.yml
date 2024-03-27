@@ -32,13 +32,13 @@ deploy:
   stage: deploy
   script:
     - git clone helm-chart_repository_url
-    - cd helm-chart
+    - cd helm-chart/spring-petclinic-data-jdbc
     - sed -i "s|imageTag:.*|imageTag: $TAG_ID|g" values.yaml
     - argocd login --insecure --username argocd_username --password argocd_password argocd_url
     - git config --global user.email "email@email.com"
     - git config --global user.name "username"
     - git pull
-    - git add helm-chart/values.yaml
+    - git add helm-chart/spring-petclinic-data-jdbc/values.yaml
     - git commit -m "${TAG_ID}"
     - git push origin
     - argocd app sync spring-petclinic-data-jdbc
